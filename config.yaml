@@ -1,7 +1,7 @@
 # PythonParagon Configuration File
 app:
   name: "PythonParagon"
-  version: "1.0.0"
+  version: "2.0.0"
   author: "PythonParagon Team"
 
 api:
@@ -21,7 +21,15 @@ file_operations:
     - ".yml"
     - ".csv"
     - ".md"
+    - ".log"
+    - ".xml"
 
 security:
   password_length: 16
   include_special_chars: true
+
+docker:
+  timeout: 30
+
+git:
+  default_branch: "main"

@@ -3,37 +3,32 @@ Utility commands for PythonParagon.
 
 This module provides miscellaneous utilities like currency conversion, password generation, and markdown rendering.
 """
-import typer
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from alive_progress import alive_bar
 import requests
 import secrets
 import string
-from typing import Optional
 from pathlib import Path
-from config import config
+from typing import List
+from paragon.core.config import config
 
-utils_app = typer.Typer(help="General utility commands")
 console = Console()
 
 
-@utils_app.command("currency")
-def currency_converter(
-    amount: float = typer.Argument(..., help="Amount to convert"),
-    from_currency: str = typer.Argument(..., help="Source currency code (e.g., USD)"),
-    to_currency: str = typer.Argument(..., help="Target currency code (e.g., EUR)")
-) -> None:
-    """
-    Convert currency using live exchange rates.
+def currency_converter(args: List[str]) -> None:
+    """Convert currency using live exchange rates."""
+    if len(args) < 3:
+        console.print("[red]Usage: currency <amount> <from_currency> <to_currency>[/red]")
+        return
     
-    Uses an external API to fetch current exchange rates and convert between currencies.
-    """
     try:
-        from_currency = from_currency.upper()
-        to_currency = to_currency.upper()
+        amount = float(args[0])
+        from_currency = args[1].upper()
+        to_currency = args[2].upper()
         
         with Progress(
             SpinnerColumn(),
@@ -53,12 +48,11 @@ def currency_converter(
         
         if 'rates' not in data or to_currency not in data['rates']:
             console.print(f"[red]Currency code not found: {to_currency}[/red]")
-            raise typer.Exit(code=1)
+            return
         
         exchange_rate = data['rates'][to_currency]
         converted_amount = amount * exchange_rate
         
-        # Display result
         result_text = f"[bold]{amount:,.2f} {from_currency}[/bold]\n"
         result_text += f"[dim]=[/dim]\n"
         result_text += f"[bold green]{converted_amount:,.2f} {to_currency}[/bold green]\n\n"
@@ -71,41 +65,51 @@ def currency_converter(
             expand=False
         ))
         
-        # Show date if available
         if 'date' in data:
             console.print(f"[dim]Rate as of: {data['date']}[/dim]")
         
-    except requests.RequestException as e:
-        console.print(f"[red]Error fetching exchange rates: {e}[/red]")
-        raise typer.Exit(code=1)
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(code=1)
 
 
-@utils_app.command("password")
-def password_generator(
-    length: int = typer.Option(16, help="Password length"),
-    count: int = typer.Option(1, help="Number of passwords to generate"),
-    no_special: bool = typer.Option(False, help="Exclude special characters"),
-    no_numbers: bool = typer.Option(False, help="Exclude numbers"),
-    no_uppercase: bool = typer.Option(False, help="Exclude uppercase letters")
-) -> None:
-    """
-    Generate secure random passwords.
+def password_generator(args: List[str]) -> None:
+    """Generate secure random passwords."""
+    length = 16
+    count = 1
+    no_special = False
+    no_numbers = False
+    no_uppercase = False
     
-    Creates cryptographically secure passwords with customizable character sets.
-    """
+    # Parse args
+    i = 0
+    while i < len(args):
+        if args[i] in ['--length', '-l'] and i + 1 < len(args):
+            length = int(args[i + 1])
+            i += 2
+        elif args[i] in ['--count', '-c'] and i + 1 < len(args):
+            count = int(args[i + 1])
+            i += 2
+        elif args[i] == '--no-special':
+            no_special = True
+            i += 1
+        elif args[i] == '--no-numbers':
+            no_numbers = True
+            i += 1
+        elif args[i] == '--no-uppercase':
+            no_uppercase = True
+            i += 1
+        else:
+            i += 1
+    
     try:
         if length < 4:
             console.print("[red]Password length must be at least 4 characters[/red]")
-            raise typer.Exit(code=1)
+            return
         
         if count < 1 or count > 100:
             console.print("[red]Count must be between 1 and 100[/red]")
-            raise typer.Exit(code=1)
+            return
         
-        # Build character set
         characters = string.ascii_lowercase
         
         if not no_uppercase:
@@ -119,22 +123,27 @@ def password_generator(
         
         if len(characters) < 4:
             console.print("[red]Character set too small. Enable at least one character type.[/red]")
-            raise typer.Exit(code=1)
+            return
         
-        # Generate passwords
         passwords = []
-        for _ in range(count):
-            password = ''.join(secrets.choice(characters) for _ in range(length))
-            passwords.append(password)
         
-        # Display
+        if count > 5:
+            with alive_bar(count, title='Generating passwords', bar='classic', spinner='dots') as bar:
+                for _ in range(count):
+                    password = ''.join(secrets.choice(characters) for _ in range(length))
+                    passwords.append(password)
+                    bar()
+        else:
+            for _ in range(count):
+                password = ''.join(secrets.choice(characters) for _ in range(length))
+                passwords.append(password)
+        
         table = Table(title=f"Generated Password(s)", show_header=True, header_style="bold magenta")
         table.add_column("#", style="cyan", justify="center")
         table.add_column("Password", style="green")
         table.add_column("Strength", style="yellow")
         
         for i, pwd in enumerate(passwords, 1):
-            # Simple strength indicator
             if length >= 16 and not no_special and not no_numbers:
                 strength = "🟢 Strong"
             elif length >= 12:
@@ -146,7 +155,6 @@ def password_generator(
         
         console.print(table)
         
-        # Show character set info
         char_info = []
         if not no_uppercase:
             char_info.append("uppercase")
@@ -156,40 +164,27 @@ def password_generator(
             char_info.append("special chars")
         
         console.print(f"\n[dim]Character set: lowercase, {', '.join(char_info)}[/dim]")
-        console.print("[dim]Tip: Use strong passwords (16+ chars with all character types)[/dim]")
         
     except Exception as e:
         console.print(f"[red]Error generating password: {e}[/red]")
-        raise typer.Exit(code=1)
 
 
-@utils_app.command("markdown")
-def markdown_renderer(
-    file: Optional[str] = typer.Argument(None, help="Markdown file to render"),
-    text: Optional[str] = typer.Option(None, help="Markdown text to render directly")
-) -> None:
-    """
-    Render markdown with beautiful formatting.
+def markdown_renderer(args: List[str]) -> None:
+    """Render markdown with beautiful formatting."""
+    if not args:
+        console.print("[red]Usage: markdown <file>[/red]")
+        return
     
-    Displays markdown content with syntax highlighting and proper formatting.
-    """
+    file = args[0]
+    
     try:
-        markdown_content = ""
+        file_path = Path(file)
+        if not file_path.exists():
+            console.print(f"[red]File not found: {file}[/red]")
+            return
         
-        if file:
-            file_path = Path(file)
-            if not file_path.exists():
-                console.print(f"[red]File not found: {file}[/red]")
-                raise typer.Exit(code=1)
-            
-            with open(file_path, 'r', encoding='utf-8') as f:
-                markdown_content = f.read()
-        elif text:
-            markdown_content = text
-        else:
-            console.print("[red]Please provide either a file or text to render[/red]")
-            console.print("Usage: python main.py utils markdown <file> or --text 'your markdown'")
-            raise typer.Exit(code=1)
+        with open(file_path, 'r', encoding='utf-8') as f:
+            markdown_content = f.read()
         
         if not markdown_content:
             console.print("[yellow]No content to render[/yellow]")
@@ -200,19 +195,17 @@ def markdown_renderer(
         
     except Exception as e:
         console.print(f"[red]Error rendering markdown: {e}[/red]")
-        raise typer.Exit(code=1)
 
 
-@utils_app.command("base64")
-def base64_converter(
-    text: str = typer.Argument(..., help="Text to encode/decode"),
-    decode: bool = typer.Option(False, help="Decode instead of encode")
-) -> None:
-    """
-    Encode or decode Base64 strings.
+def base64_converter(args: List[str]) -> None:
+    """Encode or decode Base64 strings."""
+    if not args:
+        console.print("[red]Usage: base64 <text> [--decode][/red]")
+        return
     
-    Converts text to/from Base64 encoding.
-    """
+    text = args[0]
+    decode = '--decode' in args or '-d' in args
+    
     try:
         import base64
         
@@ -224,7 +217,7 @@ def base64_converter(
                 color = "green"
             except Exception as e:
                 console.print(f"[red]Invalid Base64 string: {e}[/red]")
-                raise typer.Exit(code=1)
+                return
         else:
             encoded = base64.b64encode(text.encode('utf-8')).decode('utf-8')
             result = encoded
@@ -240,23 +233,28 @@ def base64_converter(
         
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
-        raise typer.Exit(code=1)
 
 
-@utils_app.command("hash")
-def hash_text(
-    text: str = typer.Argument(..., help="Text to hash"),
-    algorithm: str = typer.Option("sha256", help="Hash algorithm (md5, sha1, sha256, sha512)")
-) -> None:
-    """
-    Generate hash of text using various algorithms.
+def hash_text(args: List[str]) -> None:
+    """Generate hash of text using various algorithms."""
+    if not args:
+        console.print("[red]Usage: hash <text> [--algorithm sha256][/red]")
+        return
     
-    Supports MD5, SHA1, SHA256, and SHA512 hashing algorithms.
-    """
+    text = args[0]
+    algorithm = "sha256"
+    
+    # Parse algorithm
+    i = 1
+    while i < len(args):
+        if args[i] in ['--algorithm', '-a'] and i + 1 < len(args):
+            algorithm = args[i + 1].lower()
+            i += 2
+        else:
+            i += 1
+    
     try:
         import hashlib
-        
-        algorithm = algorithm.lower()
         
         if algorithm == "md5":
             hash_obj = hashlib.md5(text.encode('utf-8'))
@@ -269,7 +267,7 @@ def hash_text(
         else:
             console.print(f"[red]Unsupported algorithm: {algorithm}[/red]")
             console.print("Supported: md5, sha1, sha256, sha512")
-            raise typer.Exit(code=1)
+            return
         
         hash_value = hash_obj.hexdigest()
         
@@ -281,42 +279,47 @@ def hash_text(
         
         console.print(table)
         
-        # Security note for MD5 and SHA1
         if algorithm in ["md5", "sha1"]:
             console.print("\n[yellow]⚠ Warning: This algorithm is not recommended for security purposes.[/yellow]")
         
     except Exception as e:
         console.print(f"[red]Error generating hash: {e}[/red]")
-        raise typer.Exit(code=1)
 
 
-@utils_app.command("uuid")
-def generate_uuid(
-    count: int = typer.Option(1, help="Number of UUIDs to generate"),
-    version: int = typer.Option(4, help="UUID version (1 or 4)")
-) -> None:
-    """
-    Generate UUIDs (Universally Unique Identifiers).
+def generate_uuid(args: List[str]) -> None:
+    """Generate UUIDs (Universally Unique Identifiers)."""
+    count = 1
+    uuid_version = 4
     
-    Creates UUID v1 (time-based) or UUID v4 (random) identifiers.
-    """
+    # Parse args
+    i = 0
+    while i < len(args):
+        if args[i] in ['--count', '-c'] and i + 1 < len(args):
+            count = int(args[i + 1])
+            i += 2
+        elif args[i] in ['--version', '-v'] and i + 1 < len(args):
+            uuid_version = int(args[i + 1])
+            i += 2
+        else:
+            i += 1
+    
     try:
         import uuid
         
-        if version not in [1, 4]:
+        if uuid_version not in [1, 4]:
             console.print("[red]Only UUID version 1 and 4 are supported[/red]")
-            raise typer.Exit(code=1)
+            return
         
         if count < 1 or count > 100:
             console.print("[red]Count must be between 1 and 100[/red]")
-            raise typer.Exit(code=1)
+            return
         
-        table = Table(title=f"Generated UUID v{version}", show_header=True, header_style="bold magenta")
+        table = Table(title=f"Generated UUID v{uuid_version}", show_header=True, header_style="bold magenta")
         table.add_column("#", style="cyan", justify="center")
         table.add_column("UUID", style="green")
         
         for i in range(count):
-            if version == 1:
+            if uuid_version == 1:
                 new_uuid = str(uuid.uuid1())
             else:
                 new_uuid = str(uuid.uuid4())
@@ -325,11 +328,10 @@ def generate_uuid(
         
         console.print(table)
         
-        if version == 1:
+        if uuid_version == 1:
             console.print("\n[dim]UUID v1: Time-based (includes MAC address and timestamp)[/dim]")
         else:
             console.print("\n[dim]UUID v4: Random (cryptographically secure)[/dim]")
         
     except Exception as e:
         console.print(f"[red]Error generating UUID: {e}[/red]")
-        raise typer.Exit(code=1)

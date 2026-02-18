@@ -4,22 +4,24 @@ Centralized configuration manager for PythonParagon.
 This module handles loading and accessing configuration settings from config.yaml.
 """
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import yaml
 
 
 class ConfigManager:
     """Centralized configuration manager using YAML."""
     
-    def __init__(self, config_path: Path = None):
+    def __init__(self, config_path: Optional[Path] = None):
         """
         Initialize the configuration manager.
         
         Args:
-            config_path: Path to the configuration file. Defaults to config.yaml in the current directory.
+            config_path: Path to the configuration file. Defaults to config.yaml in the root directory.
         """
         if config_path is None:
-            config_path = Path(__file__).parent / "config.yaml"
+            # Look for config.yaml in the project root
+            current = Path(__file__).parent.parent.parent
+            config_path = current / "config.yaml"
         
         self.config_path = config_path
         self._config: Dict[str, Any] = {}
@@ -42,7 +44,7 @@ class ConfigManager:
         return {
             "app": {
                 "name": "PythonParagon",
-                "version": "1.0.0",
+                "version": "2.0.0",
                 "author": "PythonParagon Team"
             },
             "api": {
@@ -55,11 +57,17 @@ class ConfigManager:
             },
             "file_operations": {
                 "max_file_size_mb": 100,
-                "supported_extensions": [".txt", ".json", ".yaml", ".yml", ".csv", ".md"]
+                "supported_extensions": [".txt", ".json", ".yaml", ".yml", ".csv", ".md", ".log", ".xml"]
             },
             "security": {
                 "password_length": 16,
                 "include_special_chars": True
+            },
+            "docker": {
+                "timeout": 30
+            },
+            "git": {
+                "default_branch": "main"
             }
         }
     

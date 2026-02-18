@@ -1,211 +1,226 @@
 #!/usr/bin/env python3
 """
-PythonParagon - A Sophisticated Python CLI Application
+PythonParagon - A Professional Python Terminal Application
 
-This application demonstrates the peak of Python's terminal capabilities by integrating
-multiple powerful libraries into a single, cohesive interface.
+Main entry point for the application.
 
 Author: PythonParagon Team
-Version: 1.0.0
+Version: 2.0.0
+License: MIT
 """
-import typer
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-from typing import Optional
+import sys
+from paragon.core.shell import InteractiveShell
 
-from commands_system import system_app
-from commands_network import network_app
-from commands_filelab import filelab_app
-from commands_utils import utils_app
-from config import config
-
-# Initialize the main Typer app
-app = typer.Typer(
-    name="pythonparagon",
-    help="🚀 PythonParagon - A sophisticated Python CLI showcasing terminal capabilities",
-    add_completion=True,
-    rich_markup_mode="rich"
-)
-
-# Initialize Rich console
-console = Console()
-
-# Register command groups as subcommands
-app.add_typer(system_app, name="system", help="🖥️  System monitoring and information")
-app.add_typer(network_app, name="network", help="🌐 Network utilities and diagnostics")
-app.add_typer(filelab_app, name="filelab", help="📁 File operations and management")
-app.add_typer(utils_app, name="utils", help="🛠️  General utility commands")
+# Import all command modules
+from paragon.commands import system, network, filelab, utils, data, git, docker, text, filesystem, archive, shell_utils
 
 
-@app.command()
-def info() -> None:
-    """
-    Display information about PythonParagon.
+def main():
+    """Main entry point for PythonParagon."""
     
-    Shows application details, version, and available command categories.
-    """
-    app_name = config.get("app.name", "PythonParagon")
-    app_version = config.get("app.version", "1.0.0")
-    app_author = config.get("app.author", "PythonParagon Team")
+    # Create shell instance
+    shell = InteractiveShell()
     
-    info_text = f"""
-[bold cyan]{app_name}[/bold cyan] - Version {app_version}
-[dim]by {app_author}[/dim]
-
-A sophisticated Python CLI application demonstrating the peak of Python's 
-terminal capabilities through beautiful interfaces and powerful integrations.
-
-[bold]Command Categories:[/bold]
-  🖥️  [cyan]system[/cyan]   - System monitoring (CPU, RAM, processes, disk)
-  🌐 [cyan]network[/cyan]  - Network utilities (IP lookup, HTTP checker, port scanner)
-  📁 [cyan]filelab[/cyan]  - File operations (bulk rename, metadata, tree view)
-  🛠️  [cyan]utils[/cyan]    - Utilities (currency, password gen, markdown renderer)
-
-[bold]Usage:[/bold]
-  python main.py [CATEGORY] [COMMAND] [OPTIONS]
-
-[bold]Examples:[/bold]
-  python main.py system cpu
-  python main.py network ip
-  python main.py filelab tree .
-  python main.py utils password --length 20
-
-[bold]Get Help:[/bold]
-  python main.py --help
-  python main.py [CATEGORY] --help
-  python main.py [CATEGORY] [COMMAND] --help
-"""
+    # Register all system commands
+    shell.register_command('system.cpu', system.monitor_cpu)
+    shell.register_command('system.memory', system.monitor_memory)
+    shell.register_command('system.processes', system.list_processes)
+    shell.register_command('system.disk', system.disk_usage)
+    shell.register_command('system.env', system.show_environment)
+    shell.register_command('system.whoami', system.whoami_command)
+    shell.register_command('system.hostname', system.hostname_command)
+    shell.register_command('system.uptime', system.uptime_command)
+    shell.register_command('system.date', system.date_command)
+    shell.register_command('system.which', system.which_command)
+    shell.register_command('system.kill', system.kill_command)
     
-    console.print(Panel(
-        info_text,
-        title=f"🚀 {app_name}",
-        border_style="bold blue",
-        expand=False
-    ))
-
-
-@app.command()
-def list_commands() -> None:
-    """
-    List all available commands organized by category.
+    # Register network commands
+    shell.register_command('network.ip', network.public_ip)
+    shell.register_command('network.http-check', network.http_status_checker)
+    shell.register_command('network.port-scan', network.port_scanner)
+    shell.register_command('network.ping', network.ping_host)
+    shell.register_command('network.wget', network.wget_command)
     
-    Provides a comprehensive overview of all commands in the application.
-    """
-    commands_by_category = {
-        "System": [
-            ("cpu", "Monitor CPU usage in real-time"),
-            ("memory", "Display current memory (RAM) usage"),
-            ("processes", "List running processes sorted by resource usage"),
-            ("disk", "Display disk usage information")
-        ],
-        "Network": [
-            ("ip", "Get your public IP address"),
-            ("http-check", "Check HTTP status of a URL"),
-            ("port-scan", "Perform a basic port scan on a host"),
-            ("ping", "Check if a host is reachable")
-        ],
-        "File Lab": [
-            ("rename", "Bulk rename files in a directory"),
-            ("metadata", "Extract and display file metadata"),
-            ("tree", "Visualize directory structure as a tree"),
-            ("search", "Search for files based on various criteria")
-        ],
-        "Utils": [
-            ("currency", "Convert currency using live exchange rates"),
-            ("password", "Generate secure random passwords"),
-            ("markdown", "Render markdown with beautiful formatting"),
-            ("base64", "Encode or decode Base64 strings"),
-            ("hash", "Generate hash of text using various algorithms"),
-            ("uuid", "Generate UUIDs (Universally Unique Identifiers)")
-        ]
-    }
+    # Register filelab commands
+    shell.register_command('filelab.rename', filelab.bulk_rename)
+    shell.register_command('filelab.metadata', filelab.file_metadata)
+    shell.register_command('filelab.tree', filelab.directory_tree)
+    shell.register_command('filelab.search', filelab.search_files)
     
-    table = Table(
-        title="🎯 Available Commands",
-        show_header=True,
-        header_style="bold magenta",
-        title_style="bold cyan"
-    )
-    table.add_column("Category", style="cyan", width=15)
-    table.add_column("Command", style="green", width=15)
-    table.add_column("Description", style="white")
+    # Register utils commands
+    shell.register_command('utils.currency', utils.currency_converter)
+    shell.register_command('utils.password', utils.password_generator)
+    shell.register_command('utils.markdown', utils.markdown_renderer)
+    shell.register_command('utils.base64', utils.base64_converter)
+    shell.register_command('utils.hash', utils.hash_text)
+    shell.register_command('utils.uuid', utils.generate_uuid)
     
-    for category, commands in commands_by_category.items():
-        for i, (cmd, desc) in enumerate(commands):
-            if i == 0:
-                table.add_row(f"[bold]{category}[/bold]", cmd, desc)
-            else:
-                table.add_row("", cmd, desc)
-        table.add_section()
+    # Register data commands
+    shell.register_command('data.json-format', data.json_format)
+    shell.register_command('data.yaml-format', data.yaml_format)
+    shell.register_command('data.csv-stats', data.csv_stats)
+    shell.register_command('data.json-query', data.json_query)
     
-    console.print(table)
-    console.print(f"\n[bold]Total Commands:[/bold] {sum(len(cmds) for cmds in commands_by_category.values())}")
-    console.print("[dim]Run 'python main.py [CATEGORY] [COMMAND] --help' for detailed usage[/dim]")
-
-
-@app.callback(invoke_without_command=True)
-def main(
-    ctx: typer.Context,
-    version: bool = typer.Option(False, "--version", "-v", help="Show version and exit")
-) -> None:
-    """
-    PythonParagon - Main application entry point.
+    # Register git commands
+    shell.register_command('git.status', git.git_status)
+    shell.register_command('git.log', git.git_log)
+    shell.register_command('git.branches', git.git_branches)
+    shell.register_command('git.diff', git.git_diff)
     
-    Run without commands to see the welcome screen, or use subcommands for specific operations.
-    """
-    if version:
-        app_name = config.get("app.name", "PythonParagon")
-        app_version = config.get("app.version", "1.0.0")
-        console.print(f"[bold]{app_name}[/bold] version [cyan]{app_version}[/cyan]")
-        raise typer.Exit()
+    # Register docker commands
+    shell.register_command('docker.ps', docker.docker_ps)
+    shell.register_command('docker.images', docker.docker_images)
+    shell.register_command('docker.stats', docker.docker_stats)
     
-    if ctx.invoked_subcommand is None:
-        # Show welcome screen
-        welcome_art = """
-╔═══════════════════════════════════════════════════════════════╗
-║                                                               ║
-║   ██████╗ ██╗   ██╗████████╗██╗  ██╗ ██████╗ ███╗   ██╗    ║
-║   ██╔══██╗╚██╗ ██╔╝╚══██╔══╝██║  ██║██╔═══██╗████╗  ██║    ║
-║   ██████╔╝ ╚████╔╝    ██║   ███████║██║   ██║██╔██╗ ██║    ║
-║   ██╔═══╝   ╚██╔╝     ██║   ██╔══██║██║   ██║██║╚██╗██║    ║
-║   ██║        ██║      ██║   ██║  ██║╚██████╔╝██║ ╚████║    ║
-║   ╚═╝        ╚═╝      ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝    ║
-║                                                               ║
-║              ██████╗  █████╗ ██████╗  █████╗  ██████╗  ██████╗ ███╗   ██╗
-║              ██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔════╝ ██╔═══██╗████╗  ██║
-║              ██████╔╝███████║██████╔╝███████║██║  ███╗██║   ██║██╔██╗ ██║
-║              ██╔═══╝ ██╔══██║██╔══██╗██╔══██║██║   ██║██║   ██║██║╚██╗██║
-║              ██║     ██║  ██║██║  ██║██║  ██║╚██████╔╝╚██████╔╝██║ ╚████║
-║              ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
-"""
-        console.print(f"[bold cyan]{welcome_art}[/bold cyan]")
-        
-        console.print("\n[bold]Welcome to PythonParagon![/bold] 🚀\n")
-        console.print("A sophisticated CLI showcasing Python's terminal capabilities.\n")
-        
-        console.print("[bold cyan]Quick Start:[/bold cyan]")
-        console.print("  • Run [green]python main.py info[/green] for app information")
-        console.print("  • Run [green]python main.py list-commands[/green] to see all commands")
-        console.print("  • Run [green]python main.py --help[/green] for detailed help\n")
-        
-        console.print("[bold cyan]Command Categories:[/bold cyan]")
-        console.print("  🖥️  [cyan]system[/cyan]   - Monitor CPU, RAM, processes, disk")
-        console.print("  🌐 [cyan]network[/cyan]  - IP lookup, HTTP checks, port scanning")
-        console.print("  📁 [cyan]filelab[/cyan]  - File operations and management")
-        console.print("  🛠️  [cyan]utils[/cyan]    - Passwords, currency, markdown, and more\n")
-        
-        console.print("[dim]Tip: Add --help after any command for detailed usage[/dim]\n")
+    # Register text commands
+    shell.register_command('text.log-analyze', text.log_analyze)
+    shell.register_command('text.text-stats', text.text_stats)
+    shell.register_command('text.word-count', text.word_count)
+    
+    # Register filesystem commands
+    shell.register_command('filesystem.ls', filesystem.ls_command)
+    shell.register_command('filesystem.cp', filesystem.cp_command)
+    shell.register_command('filesystem.mv', filesystem.mv_command)
+    shell.register_command('filesystem.rm', filesystem.rm_command)
+    shell.register_command('filesystem.mkdir', filesystem.mkdir_command)
+    shell.register_command('filesystem.touch', filesystem.touch_command)
+    shell.register_command('filesystem.cat', filesystem.cat_command)
+    shell.register_command('filesystem.head', filesystem.head_command)
+    shell.register_command('filesystem.tail', filesystem.tail_command)
+    shell.register_command('filesystem.grep', filesystem.grep_command)
+    shell.register_command('filesystem.sort', filesystem.sort_command)
+    
+    # Register archive commands
+    shell.register_command('archive.zip', archive.zip_command)
+    shell.register_command('archive.unzip', archive.unzip_command)
+    shell.register_command('archive.tar', archive.tar_command)
+    
+    # Register shell utility commands
+    shell.register_command('shell.echo', shell_utils.echo_command)
+    shell.register_command('shell.history', shell_utils.history_command)
+    shell.register_command('shell.alias', shell_utils.alias_command)
+    shell.register_command('shell.clear', shell_utils.clear_command)
+    shell.register_command('shell.sleep', shell_utils.sleep_command)
+    shell.register_command('shell.pwd', shell_utils.pwd_command)
+    shell.register_command('shell.cd', shell_utils.cd_command)
+    shell.register_command('shell.export', shell_utils.export_command)
+    shell.register_command('shell.printenv', shell_utils.printenv_command)
+    
+    # Register aliases for convenience
+    # System aliases
+    shell.register_alias('cpu', 'system.cpu')
+    shell.register_alias('memory', 'system.memory')
+    shell.register_alias('mem', 'system.memory')
+    shell.register_alias('processes', 'system.processes')
+    shell.register_alias('ps', 'system.processes')
+    shell.register_alias('disk', 'system.disk')
+    shell.register_alias('env', 'system.env')
+    shell.register_alias('whoami', 'system.whoami')
+    shell.register_alias('hostname', 'system.hostname')
+    shell.register_alias('uptime', 'system.uptime')
+    shell.register_alias('date', 'system.date')
+    shell.register_alias('which', 'system.which')
+    shell.register_alias('kill', 'system.kill')
+    
+    # Network aliases
+    shell.register_alias('ip', 'network.ip')
+    shell.register_alias('http', 'network.http-check')
+    shell.register_alias('scan', 'network.port-scan')
+    shell.register_alias('ping', 'network.ping')
+    shell.register_alias('wget', 'network.wget')
+    shell.register_alias('download', 'network.wget')
+    
+    # Filelab aliases
+    shell.register_alias('rename', 'filelab.rename')
+    shell.register_alias('metadata', 'filelab.metadata')
+    shell.register_alias('tree', 'filelab.tree')
+    shell.register_alias('search', 'filelab.search')
+    
+    # Filesystem aliases
+    shell.register_alias('ls', 'filesystem.ls')
+    shell.register_alias('dir', 'filesystem.ls')
+    shell.register_alias('cp', 'filesystem.cp')
+    shell.register_alias('copy', 'filesystem.cp')
+    shell.register_alias('mv', 'filesystem.mv')
+    shell.register_alias('move', 'filesystem.mv')
+    shell.register_alias('rm', 'filesystem.rm')
+    shell.register_alias('del', 'filesystem.rm')
+    shell.register_alias('mkdir', 'filesystem.mkdir')
+    shell.register_alias('touch', 'filesystem.touch')
+    shell.register_alias('cat', 'filesystem.cat')
+    shell.register_alias('type', 'filesystem.cat')
+    shell.register_alias('head', 'filesystem.head')
+    shell.register_alias('tail', 'filesystem.tail')
+    shell.register_alias('grep', 'filesystem.grep')
+    shell.register_alias('sort', 'filesystem.sort')
+    
+    # Archive aliases
+    shell.register_alias('zip', 'archive.zip')
+    shell.register_alias('unzip', 'archive.unzip')
+    shell.register_alias('tar', 'archive.tar')
+    
+    # Shell utility aliases
+    shell.register_alias('echo', 'shell.echo')
+    shell.register_alias('history', 'shell.history')
+    shell.register_alias('alias', 'shell.alias')
+    shell.register_alias('clear', 'shell.clear')
+    shell.register_alias('cls', 'shell.clear')
+    shell.register_alias('sleep', 'shell.sleep')
+    shell.register_alias('pwd', 'shell.pwd')
+    shell.register_alias('cd', 'shell.cd')
+    shell.register_alias('export', 'shell.export')
+    shell.register_alias('printenv', 'shell.printenv')
+    
+    # Utils aliases
+    shell.register_alias('currency', 'utils.currency')
+    shell.register_alias('password', 'utils.password')
+    shell.register_alias('passwd', 'utils.password')
+    shell.register_alias('markdown', 'utils.markdown')
+    shell.register_alias('md', 'utils.markdown')
+    shell.register_alias('base64', 'utils.base64')
+    shell.register_alias('b64', 'utils.base64')
+    shell.register_alias('hash', 'utils.hash')
+    shell.register_alias('uuid', 'utils.uuid')
+    
+    # Data aliases
+    shell.register_alias('json-format', 'data.json-format')
+    shell.register_alias('json', 'data.json-format')
+    shell.register_alias('yaml-format', 'data.yaml-format')
+    shell.register_alias('yaml', 'data.yaml-format')
+    shell.register_alias('csv-stats', 'data.csv-stats')
+    shell.register_alias('csv', 'data.csv-stats')
+    shell.register_alias('json-query', 'data.json-query')
+    
+    # Git aliases
+    shell.register_alias('git', 'git.status')
+    shell.register_alias('git-status', 'git.status')
+    shell.register_alias('git-log', 'git.log')
+    shell.register_alias('git-branches', 'git.branches')
+    shell.register_alias('git-diff', 'git.diff')
+    
+    # Docker aliases
+    shell.register_alias('docker', 'docker.ps')
+    shell.register_alias('docker-ps', 'docker.ps')
+    shell.register_alias('docker-images', 'docker.images')
+    shell.register_alias('docker-stats', 'docker.stats')
+    
+    # Text aliases
+    shell.register_alias('log-analyze', 'text.log-analyze')
+    shell.register_alias('log', 'text.log-analyze')
+    shell.register_alias('text-stats', 'text.text-stats')
+    shell.register_alias('word-count', 'text.word-count')
+    shell.register_alias('wc', 'text.word-count')
+    
+    # Run the shell
+    shell.run()
 
 
 if __name__ == "__main__":
     try:
-        app()
+        main()
     except KeyboardInterrupt:
-        console.print("\n[yellow]Operation cancelled by user[/yellow]")
-        raise typer.Exit(code=0)
+        print("\n\nGoodbye!")
+        sys.exit(0)
     except Exception as e:
-        console.print(f"\n[red]Unexpected error: {e}[/red]")
-        raise typer.Exit(code=1)
+        print(f"Fatal error: {e}")
+        sys.exit(1)

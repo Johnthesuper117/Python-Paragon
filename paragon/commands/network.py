@@ -3,28 +3,23 @@ Network utility commands for PythonParagon.
 
 This module provides commands for network operations like IP lookup, HTTP status checking, and port scanning.
 """
-import typer
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from alive_progress import alive_bar
 import requests
 import socket
 import time
-from typing import Optional, List
-from config import config
+import os
+from typing import List
+from paragon.core.config import config
 
-network_app = typer.Typer(help="Network utilities and diagnostics")
 console = Console()
 
 
-@network_app.command("ip")
-def public_ip() -> None:
-    """
-    Get your public IP address.
-    
-    Retrieves and displays your public IP address using an external API.
-    """
+def public_ip(args: List[str]) -> None:
+    """Get your public IP address."""
     try:
         with Progress(
             SpinnerColumn(),
@@ -50,26 +45,29 @@ def public_ip() -> None:
             expand=False
         ))
         
-    except requests.RequestException as e:
-        console.print(f"[red]Error fetching public IP: {e}[/red]")
-        raise typer.Exit(code=1)
     except Exception as e:
-        console.print(f"[red]Unexpected error: {e}[/red]")
-        raise typer.Exit(code=1)
+        console.print(f"[red]Error fetching public IP: {e}[/red]")
 
 
-@network_app.command("http-check")
-def http_status_checker(
-    url: str = typer.Argument(..., help="URL to check"),
-    method: str = typer.Option("GET", help="HTTP method (GET, POST, HEAD)")
-) -> None:
-    """
-    Check HTTP status of a URL.
+def http_status_checker(args: List[str]) -> None:
+    """Check HTTP status of a URL."""
+    if not args:
+        console.print("[red]Usage: http <url> [--method GET|POST|HEAD][/red]")
+        return
     
-    Sends an HTTP request to the specified URL and displays the response status and headers.
-    """
+    url = args[0]
+    method = "GET"
+    
+    # Parse method
+    i = 1
+    while i < len(args):
+        if args[i] in ['--method', '-m'] and i + 1 < len(args):
+            method = args[i + 1].upper()
+            i += 2
+        else:
+            i += 1
+    
     try:
-        # Ensure URL has scheme
         if not url.startswith(('http://', 'https://')):
             url = f"https://{url}"
         
@@ -83,17 +81,16 @@ def http_status_checker(
             
             timeout = config.get("network.timeout", 10)
             
-            if method.upper() == "GET":
+            if method == "GET":
                 response = requests.get(url, timeout=timeout, allow_redirects=True)
-            elif method.upper() == "POST":
+            elif method == "POST":
                 response = requests.post(url, timeout=timeout, allow_redirects=True)
-            elif method.upper() == "HEAD":
+            elif method == "HEAD":
                 response = requests.head(url, timeout=timeout, allow_redirects=True)
             else:
                 console.print(f"[red]Unsupported HTTP method: {method}[/red]")
-                raise typer.Exit(code=1)
+                return
         
-        # Determine status color
         if response.status_code < 300:
             status_color = "green"
         elif response.status_code < 400:
@@ -101,15 +98,13 @@ def http_status_checker(
         else:
             status_color = "red"
         
-        # Create results panel
         result_text = f"[bold]URL:[/bold] {url}\n"
-        result_text += f"[bold]Method:[/bold] {method.upper()}\n"
+        result_text += f"[bold]Method:[/bold] {method}\n"
         result_text += f"[bold]Status Code:[/bold] [{status_color}]{response.status_code}[/{status_color}]\n"
         result_text += f"[bold]Response Time:[/bold] {response.elapsed.total_seconds():.3f}s\n"
         
         console.print(Panel(result_text, title="HTTP Status Check", border_style=status_color))
         
-        # Display key headers
         if response.headers:
             table = Table(title="Response Headers", show_header=True, header_style="bold magenta")
             table.add_column("Header", style="cyan")
@@ -122,50 +117,50 @@ def http_status_checker(
             
             console.print(table)
         
-    except requests.Timeout:
-        console.print(f"[red]Request timed out after {timeout} seconds[/red]")
-        raise typer.Exit(code=1)
-    except requests.RequestException as e:
-        console.print(f"[red]Error checking URL: {e}[/red]")
-        raise typer.Exit(code=1)
     except Exception as e:
-        console.print(f"[red]Unexpected error: {e}[/red]")
-        raise typer.Exit(code=1)
+        console.print(f"[red]Error checking URL: {e}[/red]")
 
 
-@network_app.command("port-scan")
-def port_scanner(
-    host: str = typer.Argument(..., help="Host to scan (IP or hostname)"),
-    start_port: int = typer.Option(1, help="Starting port number"),
-    end_port: int = typer.Option(1024, help="Ending port number"),
-    timeout: float = typer.Option(0.5, help="Connection timeout in seconds")
-) -> None:
-    """
-    Perform a basic port scan on a host.
+def port_scanner(args: List[str]) -> None:
+    """Perform a basic port scan on a host."""
+    if not args:
+        console.print("[red]Usage: scan <host> [--start-port 1] [--end-port 1024] [--timeout 0.5][/red]")
+        return
     
-    Scans a range of ports on the specified host to check which ports are open.
-    Note: This is a basic scanner for educational purposes.
-    """
+    host = args[0]
+    start_port = 1
+    end_port = 1024
+    timeout = 0.5
+    
+    # Parse args
+    i = 1
+    while i < len(args):
+        if args[i] in ['--start-port', '-s'] and i + 1 < len(args):
+            start_port = int(args[i + 1])
+            i += 2
+        elif args[i] in ['--end-port', '-e'] and i + 1 < len(args):
+            end_port = int(args[i + 1])
+            i += 2
+        elif args[i] in ['--timeout', '-t'] and i + 1 < len(args):
+            timeout = float(args[i + 1])
+            i += 2
+        else:
+            i += 1
+    
     try:
         if start_port < 1 or end_port > 65535 or start_port > end_port:
             console.print("[red]Invalid port range. Ports must be between 1-65535 and start <= end[/red]")
-            raise typer.Exit(code=1)
+            return
         
-        # Limit scan range for safety
         if end_port - start_port > 1000:
             console.print("[yellow]Warning: Scanning more than 1000 ports. This may take a while...[/yellow]")
         
         console.print(f"[bold]Scanning {host} from port {start_port} to {end_port}...[/bold]\n")
         
         open_ports = []
+        total_ports = end_port - start_port + 1
         
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console
-        ) as progress:
-            task = progress.add_task("Scanning ports...", total=end_port - start_port + 1)
-            
+        with alive_bar(total_ports, title='Scanning ports', bar='smooth', spinner='dots_waves') as bar:
             for port in range(start_port, end_port + 1):
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(timeout)
@@ -174,7 +169,6 @@ def port_scanner(
                     result = sock.connect_ex((host, port))
                     if result == 0:
                         open_ports.append(port)
-                        # Try to get service name
                         try:
                             service = socket.getservbyport(port)
                         except:
@@ -182,15 +176,14 @@ def port_scanner(
                         console.print(f"[green]✓ Port {port} is OPEN ({service})[/green]")
                 except socket.gaierror:
                     console.print(f"[red]Could not resolve hostname: {host}[/red]")
-                    raise typer.Exit(code=1)
+                    return
                 except socket.error:
                     pass
                 finally:
                     sock.close()
                 
-                progress.update(task, advance=1)
+                bar()
         
-        # Summary
         if open_ports:
             console.print(f"\n[bold green]Found {len(open_ports)} open port(s):[/bold green]")
             console.print(f"[green]{', '.join(map(str, open_ports))}[/green]")
@@ -199,34 +192,38 @@ def port_scanner(
         
     except KeyboardInterrupt:
         console.print("\n[yellow]Scan interrupted by user[/yellow]")
-        raise typer.Exit(code=0)
     except Exception as e:
         console.print(f"[red]Error during port scan: {e}[/red]")
-        raise typer.Exit(code=1)
 
 
-@network_app.command("ping")
-def ping_host(
-    host: str = typer.Argument(..., help="Host to ping"),
-    count: int = typer.Option(4, help="Number of ping attempts")
-) -> None:
-    """
-    Check if a host is reachable.
+def ping_host(args: List[str]) -> None:
+    """Check if a host is reachable."""
+    if not args:
+        console.print("[red]Usage: ping <host> [--count 4][/red]")
+        return
     
-    Attempts to resolve and connect to a host to check connectivity.
-    """
+    host = args[0]
+    count = 4
+    
+    # Parse args
+    i = 1
+    while i < len(args):
+        if args[i] in ['--count', '-c'] and i + 1 < len(args):
+            count = int(args[i + 1])
+            i += 2
+        else:
+            i += 1
+    
     try:
         console.print(f"[bold]Pinging {host}...[/bold]\n")
         
-        # Resolve hostname
         try:
             ip_address = socket.gethostbyname(host)
             console.print(f"[green]Resolved {host} to {ip_address}[/green]\n")
         except socket.gaierror:
             console.print(f"[red]Could not resolve hostname: {host}[/red]")
-            raise typer.Exit(code=1)
+            return
         
-        # Attempt connections
         successful = 0
         table = Table(title=f"Ping Results for {host}", show_header=True, header_style="bold magenta")
         table.add_column("Attempt", style="cyan", justify="center")
@@ -238,7 +235,7 @@ def ping_host(
             
             try:
                 start_time = time.time()
-                result = sock.connect_ex((ip_address, 80))  # Try port 80
+                result = sock.connect_ex((ip_address, 80))
                 end_time = time.time()
                 
                 if result == 0:
@@ -257,4 +254,76 @@ def ping_host(
         
     except Exception as e:
         console.print(f"[red]Error pinging host: {e}[/red]")
-        raise typer.Exit(code=1)
+
+
+def wget_command(args: List[str]) -> None:
+    """Download files from URLs."""
+    if not args:
+        console.print("[red]✗[/red] Usage: wget <url> [output_filename]")
+        return
+    
+    url = args[0]
+    output_file = args[1] if len(args) > 1 else None
+    
+    # If no output filename specified, extract from URL
+    if not output_file:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        output_file = os.path.basename(parsed.path) or "downloaded_file"
+    
+    try:
+        console.print(f"[cyan]Downloading:[/cyan] {url}")
+        console.print(f"[cyan]Saving to:[/cyan] {output_file}\n")
+        
+        response = requests.get(url, stream=True, timeout=30)
+        response.raise_for_status()
+        
+        # Get file size if available
+        total_size = int(response.headers.get('content-length', 0))
+        
+        from rich.progress import Progress, DownloadColumn, TransferSpeedColumn, TimeRemainingColumn, BarColumn
+        
+        with Progress(
+            TextColumn("[bold blue]{task.description}"),
+            BarColumn(bar_width=40),
+            DownloadColumn(),
+            TransferSpeedColumn(),
+            TimeRemainingColumn(),
+            console=console
+        ) as progress:
+            task = progress.add_task("Downloading", total=total_size)
+            
+            with open(output_file, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        progress.update(task, advance=len(chunk))
+        
+        # Show summary
+        file_size = os.path.getsize(output_file)
+        
+        table = Table(title="📥 Download Complete")
+        table.add_column("Property", style="cyan bold")
+        table.add_column("Value", style="green")
+        
+        table.add_row("URL", url)
+        table.add_row("Saved As", output_file)
+        table.add_row("File Size", format_size(file_size))
+        table.add_row("Status", "[green]✓ Success[/green]")
+        
+        console.print(table)
+        
+    except requests.exceptions.RequestException as e:
+        console.print(f"[red]✗[/red] Download failed: {e}")
+    except Exception as e:
+        console.print(f"[red]✗[/red] Error: {e}")
+
+
+def format_size(size: int) -> str:
+    """Format byte size to human-readable string."""
+    size_float = float(size)
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if size_float < 1024:
+            return f"{size_float:.1f}{unit}"
+        size_float /= 1024
+    return f"{size_float:.1f}PB"
