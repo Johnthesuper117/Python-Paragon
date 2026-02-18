@@ -1,0 +1,27 @@
+# PythonParagon Configuration File
+app:
+  name: "PythonParagon"
+  version: "1.0.0"
+  author: "PythonParagon Team"
+
+api:
+  currency_api: "https://api.exchangerate-api.com/v4/latest/"
+  ip_api: "https://api.ipify.org?format=json"
+  
+network:
+  timeout: 10
+  max_retries: 3
+
+file_operations:
+  max_file_size_mb: 100
+  supported_extensions:
+    - ".txt"
+    - ".json"
+    - ".yaml"
+    - ".yml"
+    - ".csv"
+    - ".md"
+
+security:
+  password_length: 16
+  include_special_chars: true
