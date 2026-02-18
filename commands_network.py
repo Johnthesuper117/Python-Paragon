@@ -10,6 +10,7 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 import requests
 import socket
+import time
 from typing import Optional, List
 from config import config
 
@@ -236,9 +237,9 @@ def ping_host(
             sock.settimeout(2)
             
             try:
-                start_time = socket.time.time()
+                start_time = time.time()
                 result = sock.connect_ex((ip_address, 80))  # Try port 80
-                end_time = socket.time.time()
+                end_time = time.time()
                 
                 if result == 0:
                     successful += 1

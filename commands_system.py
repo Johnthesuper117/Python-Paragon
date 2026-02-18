@@ -74,8 +74,8 @@ def monitor_memory() -> None:
         
         # Virtual Memory
         table.add_row("Total RAM", f"{mem.total / (1024**3):.2f} GB", "")
-        table.add_row("Available RAM", f"{mem.available / (1024**3):.2f} GB", f"{mem.percent}%")
-        table.add_row("Used RAM", f"{mem.used / (1024**3):.2f} GB", f"{100 - mem.percent:.1f}%")
+        table.add_row("Available RAM", f"{mem.available / (1024**3):.2f} GB", f"{100 - mem.percent:.1f}%")
+        table.add_row("Used RAM", f"{mem.used / (1024**3):.2f} GB", f"{mem.percent}%")
         table.add_section()
         
         # Swap Memory

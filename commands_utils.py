@@ -188,7 +188,7 @@ def markdown_renderer(
             markdown_content = text
         else:
             console.print("[red]Please provide either a file or text to render[/red]")
-            console.print("Usage: python-paragon utils markdown <file> or --text 'your markdown'")
+            console.print("Usage: python main.py utils markdown <file> or --text 'your markdown'")
             raise typer.Exit(code=1)
         
         if not markdown_content:
